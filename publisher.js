@@ -4,47 +4,15 @@ class Publisher {
   constructor() {
     this.terminateAll = false;
 
-    this.payloads = [
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-      "https://google.com.br",
-    ];
+    this.payloads = [];
+    const baseUrl = "https://google.com.br";
+    for (let index = 0; index < 50; index++) {
+      this.payloads.push(baseUrl);
+      
+    }
 
-    this.chunkSize = 3;
+
+    this.chunkSize = 1;
     this.chunks = [];
 
     this.workers = [];
@@ -76,17 +44,26 @@ class Publisher {
       }
 
       const promises = chunk.map(async (url, index) => {
+        const date = new Date();
         return new Promise((resolve, reject) => {
-          this.ssr(url, `./prints/${index}.png`).then((retorno) => {
-            resolve(retorno);
-          }).catch((e) => {
-            console.log(e)
-            resolve(e);
-          });
+          this.ssr(url, `./prints/${date.toISOString()}.png`)
+            .then((retorno) => {
+              resolve(retorno);
+            })
+            .catch((e) => {
+              console.log(e);
+              resolve(e);
+            });
         });
       });
 
       await Promise.all(promises);
+
+      // await new Promise((resolve, reject) => {
+      //   setTimeout(() => {
+      //     resolve();
+      //   }, 2500)
+      // });
     }
 
     await this.browser.close();
@@ -94,7 +71,18 @@ class Publisher {
 
   async startBrowser() {
     this.browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-session-crashed-bubble',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--noerrdialogs',
+        '--disable-gpu'
+      ],
     });
   }
 
@@ -102,6 +90,7 @@ class Publisher {
     try {
       console.log(`Coleta iniciada: ${url}`);
       const page = await this.browser.newPage();
+      await page.setViewport({ width: 1920, height: 1080 });
 
       await page.goto(url, { waitUntil: "networkidle0" });
       await page.screenshot({ path: nomePrint, fullPage: true });
