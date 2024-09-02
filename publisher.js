@@ -1,5 +1,5 @@
 const { Worker, isMainThread, parentPort } = require("worker_threads");
-
+const puppeteer = require("puppeteer");
 class Publisher {
   constructor() {
     this.terminateAll = false;
@@ -64,6 +64,8 @@ class Publisher {
   }
 
   async processar() {
+    await this.startBrowser();
+
     for (let i = 0; i < this.payloads.length; i += this.chunkSize) {
       this.chunks.push(this.payloads.slice(i, i + this.chunkSize));
     }
@@ -73,35 +75,40 @@ class Publisher {
         break;
       }
 
-      const promises = chunk.map(async (url) => {
-        const worker = new Worker("./subscriber.js");
-        this.workers.push(worker);
+      const promises = chunk.map(async (url, index) => {
         return new Promise((resolve, reject) => {
-          worker.once("message", (message) => {
-            if (message.success) {
-              console.log(`Finalizou: ${message.url}`);
-              return resolve(message);
-            }
-
-            console.error(`Erro ao processar o worker: ${message.error}`);
-            resolve();
-          });
-          worker.on("error", () => {
-            console.error(`Erro no worker:`);
-            reject();
-          });
-
-          console.log(
-            `Iniciando worker de ID ${worker.threadId} e enviando o payload "${url}"`
-          );
-          worker.postMessage({
-            url: url,
-            workerId: `./prints/${worker.threadId}.png`,
+          this.ssr(url, `./prints/${index}.png`).then((retorno) => {
+            resolve(retorno);
+          }).catch((e) => {
+            console.log(e)
+            resolve(e);
           });
         });
       });
 
       await Promise.all(promises);
+    }
+
+    await this.browser.close();
+  }
+
+  async startBrowser() {
+    this.browser = await puppeteer.launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+
+  async ssr(url, nomePrint = "print.png") {
+    try {
+      console.log(`Coleta iniciada: ${url}`);
+      const page = await this.browser.newPage();
+
+      await page.goto(url, { waitUntil: "networkidle0" });
+      await page.screenshot({ path: nomePrint, fullPage: true });
+
+      console.log(`Coleta realizada: ${url}`);
+    } catch (err) {
+      throw new Error(`Exception: ${err.message}`);
     }
   }
 
