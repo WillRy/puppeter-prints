@@ -1,4 +1,3 @@
-const { Worker, isMainThread, parentPort } = require("worker_threads");
 const puppeteer = require("puppeteer");
 class Publisher {
   constructor() {
@@ -18,10 +17,8 @@ class Publisher {
     this.workers = [];
 
     this.configurarGracefulShutdown();
-
-    const randomInt = Math.floor(Math.random() * 1000);
     
-    this.identificadorColetaAtual = randomInt;
+    this.identificadorColetaAtual = 777;
   }
 
   configurarGracefulShutdown() {
@@ -50,7 +47,8 @@ class Publisher {
       const promises = chunk.map(async (url, index) => {
         const date = new Date();
         return new Promise((resolve, reject) => {
-          this.ssr(url, `./prints/${date.toISOString()}.png`)
+          const completePathToSave = __dirname + `/prints/${date.toISOString()}.png`;
+          this.ssr(url, `${completePathToSave}`)
             .then((retorno) => {
               resolve(retorno);
             })
@@ -70,7 +68,7 @@ class Publisher {
   async startBrowser() {
     this.browser = await puppeteer.launch({
       args: [
-        `--port=${this.identificadorColetaAtual}`,
+        `--print=${this.identificadorColetaAtual}`,
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-logging',
@@ -111,7 +109,7 @@ class Publisher {
   }
 
   matarProcessosPorPametroDeIdentificador() {
-    const identificadorParaMatar = `--port=${this.identificadorColetaAtual}`;
+    const identificadorParaMatar = `--print=${this.identificadorColetaAtual}`;
 
     const exec = require("child_process").exec;
     
