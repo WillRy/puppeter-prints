@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "node test.js",
-    "build": "tsup ./publisher.js"
+    "build": "tsup ./publisher.js && mkdir -p dist/prints"
   },
   "author": "",
   "license": "ISC",
